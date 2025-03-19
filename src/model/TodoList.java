@@ -29,7 +29,12 @@ public class TodoList implements Serializable {
      * @return true si la catégorie a été ajoutée, false si elle existait déjà
      */
     public boolean addCategory(Category category) {
-
+        if (categories.contains(category)) {
+            return false;
+        }
+        categories.add(category);
+        tasksByCategory.put(category, new ArrayList<>());
+        return true;
     }
 
     /**
@@ -39,7 +44,12 @@ public class TodoList implements Serializable {
      * @return true si la catégorie a été supprimée, false sinon
      */
     public boolean removeCategory(Category category) {
-
+        if (!categories.contains(category)) {
+            return false;
+        }
+        categories.remove(category);
+        tasksByCategory.remove(category);
+        return true;
     }
 
     /**
@@ -58,7 +68,10 @@ public class TodoList implements Serializable {
      * @return La catégorie trouvée ou null si aucune correspondance
      */
     public Category findCategoryByName(String name) {
-
+        return categories.stream()
+                .filter(c -> c.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -68,7 +81,18 @@ public class TodoList implements Serializable {
      * @return true si la tâche a été ajoutée, false sinon
      */
     public boolean addTask(Task task) {
+        Category category = task.getCategory();
+        if (!categories.contains(category)) {
+            return false;
+        }
 
+        List<Task> tasks = tasksByCategory.get(category);
+        if (tasks.contains(task)) {
+            return false;
+        }
+
+        tasks.add(task);
+        return true;
     }
 
     /**
@@ -78,7 +102,13 @@ public class TodoList implements Serializable {
      * @return true si la tâche a été supprimée, false sinon
      */
     public boolean removeTask(Task task) {
+        Category category = task.getCategory();
+        if (!categories.contains(category)) {
+            return false;
+        }
 
+        List<Task> tasks = tasksByCategory.get(category);
+        return tasks.remove(task);
     }
 
     /**
@@ -88,7 +118,10 @@ public class TodoList implements Serializable {
      * @return La liste des tâches de cette catégorie
      */
     public List<Task> getTasksByCategory(Category category) {
-
+        if (!categories.contains(category)) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(tasksByCategory.get(category));
     }
 
     /**
@@ -97,7 +130,9 @@ public class TodoList implements Serializable {
      * @return La liste complète des tâches
      */
     public List<Task> getAllTasks() {
-
+        return tasksByCategory.values().stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -106,7 +141,9 @@ public class TodoList implements Serializable {
      * @return La liste des tâches non terminées
      */
     public List<Task> getPendingTasks() {
-
+        return getAllTasks().stream()
+                .filter(task -> !task.isCompleted())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -115,7 +152,9 @@ public class TodoList implements Serializable {
      * @return La liste des tâches terminées
      */
     public List<Task> getCompletedTasks() {
-
+        return getAllTasks().stream()
+                .filter(Task::isCompleted)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -124,7 +163,9 @@ public class TodoList implements Serializable {
      * @return La liste des tâches en retard
      */
     public List<Task> getOverdueTasks() {
-
+        return getAllTasks().stream()
+                .filter(Task::isOverdue)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -134,7 +175,17 @@ public class TodoList implements Serializable {
      * @return La liste des tâches avec échéance proche
      */
     public List<Task> getUpcomingTasks(int days) {
+        LocalDate today = LocalDate.now();
+        LocalDate future = today.plusDays(days);
 
+        return getPendingTasks().stream()
+                .filter(task -> {
+                    LocalDate dueDate = task.getDueDate();
+                    return dueDate != null &&
+                            !dueDate.isBefore(today) &&
+                            !dueDate.isAfter(future);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -144,7 +195,17 @@ public class TodoList implements Serializable {
      * @return La liste des tâches correspondantes
      */
     public List<Task> searchTasks(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
 
+        String searchTerm = keyword.toLowerCase();
+
+        return getAllTasks().stream()
+                .filter(task ->
+                        task.getTitle().toLowerCase().contains(searchTerm) ||
+                                task.getDescription().toLowerCase().contains(searchTerm))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -154,7 +215,10 @@ public class TodoList implements Serializable {
      * @return La tâche trouvée ou null si aucune correspondance
      */
     public Task findTaskById(String taskId) {
-
+        return getAllTasks().stream()
+                .filter(task -> task.getId().equals(taskId))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -163,7 +227,7 @@ public class TodoList implements Serializable {
      * @return Le nombre de tâches
      */
     public int getTaskCount() {
-
+        return getAllTasks().size();
     }
 
     /**
@@ -172,6 +236,12 @@ public class TodoList implements Serializable {
      * @return Le pourcentage de tâches terminées
      */
     public double getCompletionRate() {
+        int total = getTaskCount();
+        if (total == 0) {
+            return 0.0;
+        }
 
+        int completed = getCompletedTasks().size();
+        return (double) completed / total * 100;
     }
 }

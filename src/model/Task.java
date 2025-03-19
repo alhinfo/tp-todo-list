@@ -70,6 +70,25 @@ public class Task implements Serializable {
 
     // Getters et Setters
 
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
     public LocalDate getDueDate() {
         return dueDate;
@@ -86,10 +105,14 @@ public class Task implements Serializable {
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
-    //  implement Getter for category
 
+    public Category getCategory() {
+        return category;
+    }
 
-    // Implement setter for category
+    public void setCategory(Category category) {
+        this.category = category;
+    }
 
     public LocalDate getCreationDate() {
         return creationDate;
